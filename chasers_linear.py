@@ -46,32 +46,14 @@ for j in range(num_runners, total_agents):
     A_b = np.concatenate([A_b,b], axis=0)
 A_b = A_b[1:]
 A = np.concatenate([A_a, A_b], axis=0)
-print(A)
+
 # Create our B
 B = np.zeros((4*total_agents, 2*num_chasers))
 for j in range(num_runners, total_agents):
     B[4*j+2, 2*(j-num_runners)] = 1
     B[4*j+3, 2*(j-num_runners)+1] = 1
-print(B)
-# B = np.array([
-# [0, 0, 0, 0, 0, 0],
-# [0, 0, 0, 0, 0, 0],
-# [0, 0, 0, 0, 0, 0],
-# [0, 0, 0, 0, 0, 0],
-# [0, 0, 0, 0, 0, 0],
-# [0, 0, 0, 0, 0, 0],
-# [1, 0, 0, 0, 0, 0],
-# [0, 1, 0, 0, 0, 0],
-# [0, 0, 0, 0, 0, 0],
-# [0, 0, 0, 0, 0, 0],
-# [0, 0, 1, 0, 0, 0],
-# [0, 0, 0, 1, 0, 0],
-# [0, 0, 0, 0, 0, 0],
-# [0, 0, 0, 0, 0, 0],
-# [0, 0, 0, 0, 1, 0],
-# [0, 0, 0, 0, 0, 1]
-# ])
 P = solve_continuous_are(A,B,Q,R)
+
 def dynamics(t, x):
     return (A-B@np.linalg.inv(R)@B.T@P)@x
 

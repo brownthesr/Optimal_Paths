@@ -2,14 +2,50 @@ import numpy as np
 from scipy.linalg import solve_continuous_are
 from scipy.integrate import solve_ivp
 import matplotlib.animation as animation
-
 import matplotlib.pyplot as plt
-
 import sympy as sp
 
+# This is introduced in to the denominators for numerical stability
+eps = 0.1
+# This is the exponent on our distance function in the denominator
+# 0 corresponds to the linear case, I have found that 3 is often stable
+expo = 3
+# This is how fast our runner runs away from our pursuer
+d=1
+# Create the Q matrix
+Q = np.eye(16)
+# This encourages our herders to try and move the runner toward the origin
+Q[0,0] = 200
+Q[1,1] = 200
+# This encourages our herders to make our runner stop movving
+Q[2,2] = 1000
+Q[3,3] = 1000
+# EAch of these encourage our herders to move toward the origin and or stop moving
+Q[0+4,0+4] = 1
+Q[1+4,1+4] = 1
+Q[2+4,2+4] = 100
+Q[3+4,3+4] = 100
+Q[0+8,0+8] = 1
+Q[1+8,1+8] = 1
+Q[2+8,2+8] = 100
+Q[3+8,3+8] = 100
+Q[0+12,0+12] =1
+Q[1+12,1+12] =1
+Q[2+12,2+12] = 100
+Q[3+12,3+12] = 100
+Q /= 1000
+R = np.eye(6)/10
+# This correspond to the control variables
+B = np.zeros((16, 6))
+B[6, 0] = 1  
+B[7, 1] = 1  
+B[10, 2] = 1  
+B[11, 3] = 1  
+B[14, 4] = 1  
+B[15, 5] = 1  
+
+# The next section deals with the linearization
 # Define symbolic variables
-eps = .001
-expo = 1
 x0, y0, v0x, v0y = sp.symbols('rx ry rvx rvy')
 x1, y1, v1x, v1y = sp.symbols('c1x c1y c1vx c1vy')
 x2, y2, v2x, v2y = sp.symbols('c2x c2y c2vx c2vy')
@@ -17,6 +53,7 @@ x3, y3, v3x, v3y = sp.symbols('c3x c3y c3vx c3vy')
 d1 = sp.sqrt((x1 - x0)**2 + (y1 - y0)**2)**(expo) + eps
 d2 = sp.sqrt((x2 - x0)**2 + (y2 - y0)**2)**(expo) + eps
 d3 = sp.sqrt((x3 - x0)**2 + (y3 - y0)**2)**(expo) + eps
+# We want to linearize this part of the nonlinear dynamics
 vx_i = (x0 - x1) / d1 + (x0 - x2) / d2 + (x0 - x3) / d3
 vy_i = (y0 - y1) / d1 + (y0 - y2) / d2 + (y0 - y3) / d3
 
@@ -57,29 +94,6 @@ f_dvy_dx3 = sp.lambdify((x0, y0, x1, y1, x2, y2, x3, y3), dvy_dx3_, "numpy")
 dvy_dy3_ = sp.diff(vy_i, y3)
 f_dvy_dy3 = sp.lambdify((x0, y0, x1, y1, x2, y2, x3, y3), dvy_dy3_, "numpy")
 
-# Create the Q matrix
-Q = np.eye(16)
-# This encourages our herders to try and move the runner toward the origin
-Q[0,0] = 1
-Q[1,1] = 1
-# This encourages our herders to make our runner stop movving
-Q[2,2] = 1000
-Q[3,3] = 1000
-# EAch of these encourage our herders to move toward the origin and or stop moving
-Q[0+4,0+4] = 1
-Q[1+4,1+4] = 1
-Q[2+4,2+4] = 1000
-Q[3+4,3+4] = 1000
-Q[0+8,0+8] = 1
-Q[1+8,1+8] = 1
-Q[2+8,2+8] = 1000
-Q[3+8,3+8] = 1000
-Q[0+12,0+12] =1
-Q[1+12,1+12] =1
-Q[2+12,2+12] = 1000
-Q[3+12,3+12] = 1000
-Q /= 1000
-R = np.eye(6)*3
 def dvx_dx0(x):
     rx, ry, rvx, rvy, \
         c1x, c1y, c1vx, c1vy, \
@@ -178,18 +192,12 @@ def dvy_dy3(x):
     return f_dvy_dy3(rx,ry,c1x,c1y,c2x,c2y,c3x,c3y)
 
 
-d=1
 def linearize_dynamics(x):
-    # Compute Jacobians A(t) and B(t) at current state x
-    # (Your specific implementation here)
-    rx, ry, rvx, rvy, \
-        c1x, c1y, c1vx, c1vy, \
-        c2x, c2y, c2vx, c2vy, \
-        c3x, c3y, c3vx, c3vy = x
+    # Compute the linearization of dynamics corresponding to A matrix at time t
     A_a = np.zeros((2,16))
     A_a[0,2] = 1
     A_a[1,3] = 1
-    A_b = -np.array([
+    A_b = np.array([
         [dvx_dx0(x), dvx_dy0(x),0,0,
          dvx_dx1(x), dvx_dy1(x),0,0,
          dvx_dx2(x), dvx_dy2(x),0,0,
@@ -198,8 +206,9 @@ def linearize_dynamics(x):
          dvy_dx1(x), dvy_dy1(x),0,0,
          dvy_dx2(x), dvy_dy2(x),0,0,
           dvy_dx3(x), dvy_dy3(x),0,0]
-    ])*d
+    ])/d
     A_c = np.zeros((12,16))
+    # these correspond to the acceleration moving the position
     A_c[0,6] = 1
     A_c[1,7] = 1
     A_c[4,10] = 1
@@ -207,31 +216,26 @@ def linearize_dynamics(x):
     A_c[8,14] = 1
     A_c[9,15] = 1
     A = np.block([[A_a],[A_b],[A_c]])
-    # plt.show()
-    B = np.zeros((16, 6))
-    # Pursuer 1 acceleration affects its velocity derivatives (rows 6-7)
-    B[6, 0] = 1  # dv1x/dt = a1x
-    B[7, 1] = 1  # dv1y/dt = a1y
-    # Pursuer 2 acceleration (rows 10-11)
-    B[10, 2] = 1  # dv2x/dt = a2x
-    B[11, 3] = 1  # dv2y/dt = a2y
-    # Pursuer 3 acceleration (rows 14-15)
-    B[14, 4] = 1  # dv3x/dt = a3x
-    B[15, 5] = 1  # dv3y/dt = a3y
-    return A, B
+    return A
 
 def compute_control(x, Q, R):
-    A, B = linearize_dynamics( x)
+    A = linearize_dynamics(x)
     try:
+        # Solve the ARE
         P = solve_continuous_are(A, B, Q, R)
+        # Get the gain matrix
         K = np.linalg.inv(R) @ B.T @ P
+        # Use that to get the control
         u = -K @ x
     except np.linalg.LinAlgError:
-        print("here")
-        u = np.zeros(6)  # Fallback (e.g., zero control)
+        print("Division by zero")
+        u = np.zeros(6)  # Just in case we do divide by zero
     return u
 
 def dynamics(t, x):
+    """
+    We explicitly calculate the dynamics of the nonlinear system
+    """
     u1x, u1y, u2x, u2y, u3x, u3y = compute_control(x, Q, R)
     rx, ry, rvx, rvy, \
         c1x, c1y, c1vx, c1vy, \
@@ -248,19 +252,19 @@ def dynamics(t, x):
         c3vx,c3vy, u3x,u3y
     ])
 
+# Choose either a random or set origin state
 x_0 = np.array([
     1,1,0,0,
     1,-5,0,0,
     1.5,-5.1,0,0,
     -1.25,4,0,0
 ])
-# x_0 = np.random.normal(size=(16))
+x_0 = np.random.normal(size=(16))
 # Simulate with solve_ivp
-sol = solve_ivp(dynamics, [0,20], x_0, method='RK45')
+t_eval = np.linspace(0, 50, 500)  # 500 steps
+sol = solve_ivp(dynamics, [0,50], x_0, method='RK45', t_eval=t_eval)
 # Create the figure
 fig, ax = plt.subplots()
-ax.set_xlim(-10, 10)  # Adjust based on expected trajectory range
-ax.set_ylim(-10, 10)
 lines = [ax.plot([], [], label=f"Runner", color="r")[0] for i in range(1)]
 scatters = [ax.scatter([], [], s=50, c="r") for _ in range(1)]
 lines += [ax.plot([], [], label=f"Pursuer {i+1}", color="g")[0] for i in range(1,4)]
