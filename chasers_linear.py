@@ -8,7 +8,7 @@ import matplotlib.animation as animation
 import sympy as sp
 
 num_runners = 1
-num_chasers = 1
+num_chasers = 3
 total_agents = num_runners + num_chasers
 
 Q = np.eye(total_agents*4)
@@ -24,7 +24,7 @@ for i in range(4*num_runners, 4*num_runners+4*num_chasers, 4):
     Q[3+i,3+i] = 200
 Q /= 1000
 R = np.eye(num_chasers*2)*3
-d=100
+d=9
 # Create our A
 A_a = np.zeros((1,4*total_agents))
 for i in range(num_runners):
@@ -71,13 +71,16 @@ print(B)
 # [0, 0, 0, 0, 1, 0],
 # [0, 0, 0, 0, 0, 1]
 # ])
-print(A.shape)
 P = solve_continuous_are(A,B,Q,R)
 def dynamics(t, x):
     return (A-B@np.linalg.inv(R)@B.T@P)@x
 
 x0 = np.random.normal(size=(total_agents*4))
 x0[:1] -= 3
+# Adjusting initial positions for fun
+for i in range(total_agents):
+    x0[i*4] +=10
+    x0[i*4+1] +=10
 # x0 = np.array([
 #     1,1,0,0,
 #     1,-5,0,0,
