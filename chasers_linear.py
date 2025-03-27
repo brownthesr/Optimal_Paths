@@ -13,13 +13,13 @@ total_agents = num_runners + num_chasers
 
 Q = np.eye(total_agents*4)
 for i in range(0,4*num_runners, 4):
-    Q[i+0,i+0] = 1
-    Q[i+1,i+1] = 1
+    Q[i+0,i+0] = 10
+    Q[i+1,i+1] = 10
     Q[i+2,i+2] = 1000
     Q[i+3,i+3] = 1000
 for i in range(4*num_runners, 4*num_runners+4*num_chasers, 4):
-    Q[0+i,0+i] = 1
-    Q[1+i,1+i] = 1
+    Q[0+i,0+i] = 0
+    Q[1+i,1+i] = 0
     Q[2+i,2+i] = 200
     Q[3+i,3+i] = 200
 Q /= 1000

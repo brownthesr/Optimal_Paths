@@ -9,14 +9,14 @@ from tqdm import tqdm
 # Global progress bar
 t_f = 30
 progress_bar = tqdm(total=t_f, desc="Solving ODE")
-N = 2
-M = 10
+N = 1
+M = 3
 # This is introduced in to the denominators for numerical stability
-eps = 0.1
+eps = 0.01
 # This is the exponent on our distance function in the denominator
 # 0 corresponds to the linear case, I have found that 3 is often stable
-expo_r = 2
-expo_p = 2
+expo_r = 3
+expo_p = 3
 # This corresponds to how far away runners see pursuers
 width = 3
 # This is how fast our runner runs away from our pursuer
@@ -28,7 +28,7 @@ control_dim = 2*M
 R = np.eye(control_dim)/10
 Q = np.eye(state_dim)
 for i in range(N):
-    Q[4*i:4*i+4, 4*i:4*i+4] = np.diag([1000,1000, 0, 0])
+    Q[4*i:4*i+4, 4*i:4*i+4] = np.diag([1000,1000, 100, 100])
 for j in range(M):
     idx = 4*N + 4*j
     Q[idx:idx+4, idx:idx+4] = np.diag([1,1, 200, 200])
@@ -40,7 +40,7 @@ for j in range(M):
     B[4*N + 4*j + 2, 2*j] = 1
     B[4*N + 4*j + 3, 2*j + 1] = 1
 
-# The next section deals with the linearization (SKIP)
+# The next section deals with the linearization
 # Define symbolic variables
 x0, y0, v0x, v0y = sp.symbols('rx ry rvx rvy')
 x1, y1, v1x, v1y, e1, w = sp.symbols('c1x c1y c1vx c1vy e1 w')
@@ -68,20 +68,7 @@ f_dvy_dpx = sp.lambdify((x0, y0, x1, y1, e1, w), dvy_dpx, "numpy")
 dvy_dpy = sp.diff(vy_i_n, y1)
 f_dvy_dpy = sp.lambdify((x0, y0, x1, y1, e1, w), dvy_dpy, "numpy")
 
-# This is computes the linearized A matrix at each step
-# The idea is that the nonlinear equation is a sum of equations that all look like (a_x-b_x)/norm(a_x-b_x)^lambda
-# so I just made it faster
 def linearize_dynamics(x):
-    """This is computes the linearized A matrix at each step
-        The idea is that the nonlinear equation is a sum of equations that all look like (a_x-b_x)/norm(a_x-b_x)^lambda
-        so I just made it faster
-
-    Args:
-        x (np.array): state at specific time
-
-    Returns:
-        np.array: Linearized A matrix
-    """
     # Compute the linearization of dynamics corresponding to A matrix at time t
     A_r = np.zeros((4*N,(N+M)*4))
     # First set up the derivatives
@@ -104,20 +91,22 @@ def linearize_dynamics(x):
     for j in range(M):
         A_p[j*4,(N+j)*4+2] = 1
         A_p[j*4+1,(N+j)*4+3] = 1
+    # So this should try to encourage the pursuers to not lock in with the runners
+    # for i in range(M):
+    #     for j in range(N):
+    #         A_p[i*4+2,4*(N+i)] += f_dvx_drx(x[4*(N+i)],x[4*(N+i)+1],x[4*j],x[4*j+1], expo_p, .5)/d*1
+    #         A_p[i*4+2,4*(N+i)+1] += f_dvx_dry(x[4*(N+i)],x[4*(N+i)+1],x[4*j],x[4*j+1], expo_p, .5)/d*1
+    #         A_p[i*4+2,j*4] = f_dvx_dpx(x[4*(N+i)],x[4*(N+i)+1],x[4*j],x[4*j+1], expo_p, .5)/d*1
+    #         A_p[i*4+2,j*4+1] = f_dvx_dpy(x[4*(N+i)],x[4*(N+i)+1],x[4*j],x[4*j+1], expo_p, .5)/d*1
+            
+    #         A_p[i*4+3,4*(N+i)] += f_dvy_drx(x[4*(N+i)],x[4*(N+i)+1],x[4*j],x[4*j+1], expo_p, .5)/d*1
+    #         A_p[i*4+3,4*(N+i)+1] += f_dvy_dry(x[4*(N+i)],x[4*(N+i)+1],x[4*j],x[4*j+1], expo_p, .5)/d*1
+    #         A_p[i*4+3,j*4] = f_dvy_dpx(x[4*(N+i)],x[4*(N+i)+1],x[4*j],x[4*j+1], expo_p, .5)/d*1
+    #         A_p[i*4+3,j*4+1] = f_dvy_dpy(x[4*(N+i)],x[4*(N+i)+1],x[4*j],x[4*j+1], expo_p, .5)/d*1
     A = np.block([[A_r],[A_p]])
     return A
 
 def compute_control(x, Q, R):
-    """This computes the control, How should we update each of the chasers
-
-    Args:
-        x (np.array): Entire State
-        Q (np.array): Quadratic cost of x
-        R (np.array): Quadratic cost of u
-
-    Returns:
-        _type_: _description_
-    """
     A = linearize_dynamics(x)
     try:
         # Solve the ARE
@@ -128,7 +117,7 @@ def compute_control(x, Q, R):
         u = -K @ x
     except np.linalg.LinAlgError:
         print("Division by zero")
-        u = np.zeros(2*M)  # Just in case we do divide by zero
+        u = np.zeros(6)  # Just in case we do divide by zero
     return u
 
 def dynamics(t, x):
@@ -155,19 +144,22 @@ def dynamics(t, x):
     # Pursuers' dynamics
     for j in range(M):
         idx = 4*N + 4*j
-        
+        # Don't let the pursuerers get to close
+        acc = np.zeros(2)
+        # for i in range(N):
+        #     r_pos = x[4*i:4*i+2]
+        #     dist = (np.linalg.norm(x[idx:idx+2] - r_pos)/.5)**expo_p + eps
+        #     acc += (x[idx:idx+2]-r_pos)/dist
         dxdt[idx:idx+2] = x[idx+2:idx+4]  # Position update
         dxdt[idx+2] = u[2*j] + acc[0]/d          # x acceleration
         dxdt[idx+3] = u[2*j+1] + acc[1]/d        # y acceleration
     
     return dxdt
 
-# Initialize the states randomly
 x_0 = np.random.normal(size=(state_dim))
 # Simulate with solve_ivp
 t_eval = np.linspace(0, t_f, 500) 
 sol = solve_ivp(dynamics, [0,t_f], x_0, method='RK45', t_eval=t_eval, max_step=t_eval[1]-t_eval[0])
-
 # Create the figure
 fig, ax = plt.subplots()
 lines = [ax.plot([], [], label=f"Runner {i+1}", color="r")[0] for i in range(N)]
