@@ -80,7 +80,9 @@ dog_positions = [[2*np.cos(theta), 2*np.sin(theta)] for theta in np.linspace(0, 
 GitHub Repository: github.com/brownthesr/Optimal_Paths
 
 Video Demonstrations: 
+
 [![IMAGE ALT TEXT HERE](youtube.com/watch?v=AtLQeGqSamI/0.jpg)](youtube.com/watch?v=AtLQeGqSamI)
-References
+
+## References
 For theoretical details, refer to the accompanying paper:
 Brown, D. et al. "Corralling Sheep with Optimal Control." (2025).
