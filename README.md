@@ -81,7 +81,7 @@ GitHub Repository: github.com/brownthesr/Optimal_Paths
 
 Video Demonstrations: 
 
-[![IMAGE ALT TEXT HERE](youtube.com/watch?v=AtLQeGqSamI/0.jpg)](youtube.com/watch?v=AtLQeGqSamI)
+[![IMAGE ALT TEXT HERE](https://www.youtube.com/watch?v=AtLQeGqSamI/0.jpg)](https://www.youtube.com/watch?v=AtLQeGqSamI)
 
 ## References
 For theoretical details, refer to the accompanying paper:
