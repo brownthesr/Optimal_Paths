@@ -18,6 +18,8 @@ total_agents = num_runners + num_chasers
 
 # Define Q matrix for LQR
 # This is the cost of the value of each state over time
+# Note that each state is ordered (x_pos, y_pos, x_vel, y_vel) and each of these are stacked
+# in a single long array.
 Q = np.eye(total_agents*4)
 
 # For the runners
