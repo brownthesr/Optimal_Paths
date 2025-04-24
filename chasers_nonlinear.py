@@ -1,3 +1,8 @@
+"""
+This file simulates the dynamics for the nonlinear system where the acceleration of the sheep
+follows an inverse square law. Due to the nonlinear dynamics of the system, we linearize the 
+system around any given state and compute the control using this linearization.
+"""
 import numpy as np
 from scipy.linalg import solve_continuous_are
 from scipy.integrate import solve_ivp
@@ -19,6 +24,7 @@ M = 10
 eps = 0.1
 # This is the exponent on our distance function in the denominator
 # 0 corresponds to the linear case, I have found that 3 is often stable
+# This corresponds to an inverse square law 
 expo_r = 3
 expo_p = 3
 # This corresponds to how far away runners see pursuers
