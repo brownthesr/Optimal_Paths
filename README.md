@@ -86,3 +86,5 @@ Video Demonstrations:
 ## References
 For theoretical details, refer to the accompanying paper:
 Brown, D. et al. "Corralling Sheep with Optimal Control." (2025).
+
+Optimal_Sheep_Corralling.pdf
