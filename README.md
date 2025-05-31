@@ -1,6 +1,6 @@
 # Optimal Corralling of Sheep Using Optimal Control
 ## Overview
-This project explores optimal control strategies for herding sheep using dogs, formulated as a multi-agent system. We apply methods like Pontryagin's Maximum Principle (PMP), boundary value problem (BVP) solvers, and iterative Linear Quadratic Regulator (iLQR) to compute control trajectories. The goal is to guide sheep to the origin while minimizing energy costs for the dogs. For more information, refer to [our paper](Optimal_Sheep_Corralling.pdf)
+This project explores optimal control strategies for herding sheep using dogs, formulated as a multi-agent system. We apply methods like Pontryagin's Maximum Principle (PMP), boundary value problem (BVP) solvers, and iterative Linear Quadratic Regulator (iLQR) to compute control trajectories. The goal is to guide sheep to the origin while minimizing energy costs for the dogs. For more information, refer to [our paper](Optimal_Sheep_Corralling.pdf) or [our poster](PosterPresentation.pdf)
 
 ## Key Features
 Nonlinear Dynamics: Sheep flee from dogs with acceleration inversely proportional to distance.
